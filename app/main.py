@@ -23,6 +23,7 @@ from app.arts912_scraper import scrape_all_arts912
 from app.eal_framework_scraper import scrape_all_eal_framework
 from app.eal_courses_scraper import scrape_all_eal_courses
 from app.intl_lang_scraper import scrape_all_intl_languages
+from app.indigenous_scraper import scrape_indigenous_gr12
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 <button class="btn-ict" onclick="startScrape('eal_framework')" id="btn-eal-framework" style="background:#2ecc71">Scrape EAL Framework (K-12)</button>
                 <button class="btn-ict" onclick="startScrape('eal_courses')" id="btn-eal-courses" style="background:#27ae60">Scrape EAL/LAL Courses (SY)</button>
                 <button class="btn-ict" onclick="startScrape('intl_lang')" id="btn-intl-lang" style="background:#e67e22">Scrape International Languages (ASL/Spanish/Hebrew/German/Ukrainian)</button>
+                <button class="btn-ict" onclick="startScrape('indigenous')" id="btn-indigenous" style="background:#8e44ad">Scrape Indigenous Education (Gr 12)</button>
             </div>
         </div>
 
@@ -142,7 +144,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
     <script>
         let pollInterval = null;
-        const allBtns = ['btn-science', 'btn-social', 'btn-math', 'btn-ela', 'btn-ela-legacy', 'btn-physed', 'btn-cardev', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang'];
+        const allBtns = ['btn-science', 'btn-social', 'btn-math', 'btn-ela', 'btn-ela-legacy', 'btn-physed', 'btn-cardev', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous'];
         const btnOrigText = {};
 
         function disableAll() {
@@ -157,7 +159,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const btn = document.getElementById(id);
                 if (btn && btnOrigText[id]) btn.textContent = btnOrigText[id];
                 // Only enable buttons that are implemented
-                if (['btn-science', 'btn-social', 'btn-math', 'btn-physed', 'btn-cardev', 'btn-ela', 'btn-ela-legacy', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang'].includes(id) && btn) btn.disabled = false;
+                if (['btn-science', 'btn-social', 'btn-math', 'btn-physed', 'btn-cardev', 'btn-ela', 'btn-ela-legacy', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous'].includes(id) && btn) btn.disabled = false;
             });
         }
 
@@ -275,6 +277,7 @@ async def start_scrape(subject: str):
         "eal_framework": _run_eal_framework_scrape,
         "eal_courses": _run_eal_courses_scrape,
         "intl_lang": _run_intl_lang_scrape,
+        "indigenous": _run_indigenous_scrape,
     }
 
     func = scrape_funcs.get(subject)
@@ -484,6 +487,18 @@ def _run_intl_lang_scrape():
         log_progress("\nScrape complete!")
     except Exception as e:
         logger.exception("International Languages scrape failed")
+        log_progress(f"\nFATAL ERROR: {e}")
+    finally:
+        scrape_state["is_running"] = False
+
+
+def _run_indigenous_scrape():
+    try:
+        results = scrape_indigenous_gr12(_subject_dir("Indigenous_Education"), progress_callback=log_progress)
+        scrape_state["results"] = results
+        log_progress("\nScrape complete!")
+    except Exception as e:
+        logger.exception("Indigenous Education scrape failed")
         log_progress(f"\nFATAL ERROR: {e}")
     finally:
         scrape_state["is_running"] = False
