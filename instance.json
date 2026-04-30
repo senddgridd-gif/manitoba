@@ -1,0 +1,86 @@
+{
+    "subject": "Science",
+    "grade": "K-4",
+    "course": "K-4 Science",
+    "clusters": [
+        {
+            "id": "colours",
+            "title": "Colours",
+            "description": "Colour is an important part of the world around us...",
+            "specific_learning_outcomes": [
+                {
+                    "code": "K-2-01",
+                    "description": "Use appropriate vocabulary related to their investigations of colours. include: red, yellow, blue, orange, brown, black, white, purple, green, gray, pink, mix, light, dark, match, primary colour",
+                    "glo": [
+                        "C6",
+                        "D3"
+                    ],
+                    "glo_description": ["C6. employ effective communication skills and utilize information technology to gather and share scientific and technological ideas and data",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+                },
+                {
+                    "code": "K-2-03",
+                    "description": "Compare and contrast colours using appropriate terms. examples: lighter than, darker than, brighter than",
+                    "glo": [
+                        "C2",
+                        "D3"
+                    ],
+                    "glo_description": ["C2. demonstrate an understanding of the relationships between scientific and technological concepts",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+
+                },
+                {
+                    "code": "K-2-02",
+                    "description": "Sort and classify objects by colour.",
+                    "glo": [
+                        "C2",
+                        "D3"
+                    ],
+                    "glo_description": ["C2. demonstrate an understanding of the relationships between scientific and technological concepts",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+                },
+                {
+                    "code": "K-2-04",
+                    "description": "Order a group of objects based on a given colour criterion. examples: order objects of same colour range from lightest to darkest",
+                    "glo": [
+                        "C2",
+                        "D3"
+                    ],
+                    "glo_description": ["C2. demonstrate an understanding of the relationships between scientific and technological concepts",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+                },
+                {
+                    "code": "K-2-05",
+                    "description": "Predict and describe changes in colour from mixing.",
+                    "glo": [
+                        "C2",
+                        "D3"
+                    ],
+                    "glo_description": ["C2. demonstrate an understanding of the relationships between scientific and technological concepts",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+
+                },
+                {
+                    "code": "K-2-06",
+                    "description": "Create a colour to match a given sample by mixing primary colours.",
+                    "glo": [
+                        "C3",
+                        "D3"
+                    ],
+                    "glo_description": ["C3. demonstrate an understanding of the relationships between scientific and technological concepts and their applications",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+                },
+                {
+                    "code": "K-2-07",
+                    "description": "Explore and describe colours in environment. examples: rocks, flowers, shells, blocks, crayons",
+                    "glo": [
+                        "C2",
+                        "D3"
+                    ],
+                    "glo_description": ["C2. demonstrate an understanding of the relationships between scientific and technological concepts",
+                                        "D3. demonstrate a sense of responsibility for the environment and the impact of science and technology on the environment and society"]
+                }
+            ]
+        }
+    ]
+}
