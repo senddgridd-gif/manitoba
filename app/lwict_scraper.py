@@ -16,6 +16,8 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 
+from app.grade_splitter import split_to_per_grade
+
 logger = logging.getLogger(__name__)
 
 CONTINUUM_URL = "https://www.edu.gov.mb.ca/k12/tech/lict/teachers/show_me/continuum.html"
@@ -139,5 +141,8 @@ def scrape_lwict(
     total = sum(len(c["specific_learning_outcomes"]) for c in cluster_list)
     if progress_callback:
         progress_callback(f"Saved LwICT_Continuum.json: {len(cluster_list)} clusters, {total} outcomes")
+
+    # Split into per-grade files
+    split_to_per_grade(output_data, output_dir, "LwICT_Continuum", progress_callback=progress_callback)
 
     return cluster_list

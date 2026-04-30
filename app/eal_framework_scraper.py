@@ -17,6 +17,8 @@ from pathlib import Path
 import httpx
 import pdfplumber
 
+from app.grade_splitter import split_to_per_grade
+
 logger = logging.getLogger(__name__)
 
 PDF_CONFIGS = {
@@ -183,6 +185,10 @@ def scrape_all_eal_framework(
         if progress_callback:
             progress_callback(f"Saved {filename}: {len(eal_clusters)} clusters, {total} outcomes")
 
+        # Split into per-grade files
+        prefix = f"EAL_Framework"
+        split_to_per_grade(output_data, output_dir, prefix, progress_callback=progress_callback)
+
         results[doc_key] = eal_clusters
 
         # Parse LAL domains if present
@@ -208,6 +214,9 @@ def scrape_all_eal_framework(
             lal_total = sum(len(c["specific_learning_outcomes"]) for c in lal_clusters)
             if progress_callback:
                 progress_callback(f"Saved {lal_filename}: {len(lal_clusters)} clusters, {lal_total} outcomes")
+
+            # Split into per-grade files
+            split_to_per_grade(lal_data, output_dir, "LAL_Framework", progress_callback=progress_callback)
 
             results[f"{doc_key}_LAL"] = lal_clusters
 

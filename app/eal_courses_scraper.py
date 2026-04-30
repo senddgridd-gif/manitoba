@@ -16,6 +16,8 @@ from pathlib import Path
 import httpx
 import pdfplumber
 
+from app.grade_splitter import split_to_per_grade
+
 logger = logging.getLogger(__name__)
 
 EAL_LITERACY_URL = "https://www.edu.gov.mb.ca/k12/cur/eal/eal-literacy/sy/full_doc.pdf"
@@ -284,6 +286,9 @@ def scrape_all_eal_courses(
         total = sum(len(c["specific_learning_outcomes"]) for c in clusters)
         if progress_callback:
             progress_callback(f"Saved {filename}: {len(clusters)} clusters, {total} outcomes")
+
+        # Split into per-grade files
+        split_to_per_grade(output_data, output_dir, safe_name, progress_callback=progress_callback)
 
         results[label] = clusters
 

@@ -130,6 +130,9 @@ HTML_PAGE = """<!DOCTYPE html>
                 <button class="btn-ict" onclick="startScrape('indigenous')" id="btn-indigenous" style="background:#8e44ad">Scrape Indigenous Education (Gr 12)</button>
                 <button class="btn-ict" onclick="startScrape('lwict')" id="btn-lwict" style="background:#3498db">Scrape Literacy with ICT (K-12)</button>
             </div>
+            <div class="btn-row" style="margin-top:10px">
+                <button class="btn-all" onclick="startScrape('all')" id="btn-all">Scrape All Subjects</button>
+            </div>
         </div>
 
         <div class="card">
@@ -146,7 +149,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
     <script>
         let pollInterval = null;
-        const allBtns = ['btn-science', 'btn-social', 'btn-math', 'btn-ela', 'btn-ela-legacy', 'btn-physed', 'btn-cardev', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous', 'btn-lwict'];
+        const allBtns = ['btn-science', 'btn-social', 'btn-math', 'btn-ela', 'btn-ela-legacy', 'btn-physed', 'btn-cardev', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous', 'btn-lwict', 'btn-all'];
         const btnOrigText = {};
 
         function disableAll() {
@@ -161,7 +164,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const btn = document.getElementById(id);
                 if (btn && btnOrigText[id]) btn.textContent = btnOrigText[id];
                 // Only enable buttons that are implemented
-                if (['btn-science', 'btn-social', 'btn-math', 'btn-physed', 'btn-cardev', 'btn-ela', 'btn-ela-legacy', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous', 'btn-lwict'].includes(id) && btn) btn.disabled = false;
+                if (['btn-science', 'btn-social', 'btn-math', 'btn-physed', 'btn-cardev', 'btn-ela', 'btn-ela-legacy', 'btn-arts', 'btn-sustour', 'btn-cs', 'btn-ict', 'btn-teched', 'btn-arts912', 'btn-eal-framework', 'btn-eal-courses', 'btn-intl-lang', 'btn-indigenous', 'btn-lwict', 'btn-all'].includes(id) && btn) btn.disabled = false;
             });
         }
 
@@ -281,6 +284,7 @@ async def start_scrape(subject: str):
         "intl_lang": _run_intl_lang_scrape,
         "indigenous": _run_indigenous_scrape,
         "lwict": _run_lwict_scrape,
+        "all": _run_all_scrape,
     }
 
     func = scrape_funcs.get(subject)
@@ -517,6 +521,96 @@ def _run_lwict_scrape():
         log_progress(f"\nFATAL ERROR: {e}")
     finally:
         scrape_state["is_running"] = False
+
+
+def _run_all_scrape():
+    """Run all scrapers sequentially."""
+    all_scrapers = [
+        ("Science", _run_science_scrape_inner),
+        ("Social Studies", _run_socstud_scrape_inner),
+        ("Mathematics", _run_math_scrape_inner),
+        ("PhysEd/HealthEd", _run_pehe_scrape_inner),
+        ("Career Development", _run_cardev_scrape_inner),
+        ("ELA", _run_ela_scrape_inner),
+        ("Arts K-8", _run_arts_scrape_inner),
+        ("Arts 9-12", _run_arts912_scrape_inner),
+        ("Sustainable Tourism", _run_sustour_scrape_inner),
+        ("Computer Science", _run_cs_scrape_inner),
+        ("ICT Senior Years", _run_ict_scrape_inner),
+        ("Tech Ed ACE", _run_teched_scrape_inner),
+        ("EAL Framework", _run_eal_framework_scrape_inner),
+        ("EAL/LAL Courses", _run_eal_courses_scrape_inner),
+        ("International Languages", _run_intl_lang_scrape_inner),
+        ("Indigenous Education", _run_indigenous_scrape_inner),
+        ("Literacy with ICT", _run_lwict_scrape_inner),
+    ]
+    try:
+        for i, (name, func) in enumerate(all_scrapers, 1):
+            log_progress(f"\n{'='*50}")
+            log_progress(f"[{i}/{len(all_scrapers)}] Scraping {name}...")
+            log_progress(f"{'='*50}")
+            try:
+                func()
+            except Exception as e:
+                logger.exception(f"{name} scrape failed")
+                log_progress(f"ERROR in {name}: {e}")
+        log_progress(f"\n{'='*50}")
+        log_progress("ALL SCRAPES COMPLETE!")
+    finally:
+        scrape_state["is_running"] = False
+
+
+# Inner functions that don't manage is_running state (for use by _run_all_scrape)
+def _run_science_scrape_inner():
+    scrape_all_science(_subject_dir("Science"), progress_callback=log_progress)
+
+def _run_socstud_scrape_inner():
+    scrape_all_socstud(_subject_dir("SocialStudies"), progress_callback=log_progress)
+
+def _run_math_scrape_inner():
+    scrape_all_math(_subject_dir("Mathematics"), progress_callback=log_progress)
+
+def _run_pehe_scrape_inner():
+    scrape_all_pehe(_subject_dir("PhysEdHealthEd"), progress_callback=log_progress)
+
+def _run_cardev_scrape_inner():
+    scrape_all_cardev(_subject_dir("CareerDevelopment"), progress_callback=log_progress)
+
+def _run_ela_scrape_inner():
+    scrape_all_ela(_subject_dir("ELA"), progress_callback=log_progress)
+
+def _run_arts_scrape_inner():
+    scrape_all_arts(_subject_dir("ArtsEducation"), progress_callback=log_progress)
+
+def _run_arts912_scrape_inner():
+    scrape_all_arts912(_subject_dir("ArtsEducation_9-12"), progress_callback=log_progress)
+
+def _run_sustour_scrape_inner():
+    scrape_all_sustour(_subject_dir("SustainableTourism"), progress_callback=log_progress)
+
+def _run_cs_scrape_inner():
+    scrape_all_cs(_subject_dir("ComputerScience"), progress_callback=log_progress)
+
+def _run_ict_scrape_inner():
+    scrape_all_ict(_subject_dir("ICT"), progress_callback=log_progress)
+
+def _run_teched_scrape_inner():
+    scrape_all_teched(_subject_dir("TechEdACE"), progress_callback=log_progress)
+
+def _run_eal_framework_scrape_inner():
+    scrape_all_eal_framework(_subject_dir("EAL_Framework"), progress_callback=log_progress)
+
+def _run_eal_courses_scrape_inner():
+    scrape_all_eal_courses(_subject_dir("EAL_Courses"), progress_callback=log_progress)
+
+def _run_intl_lang_scrape_inner():
+    scrape_all_intl_languages(_subject_dir("Intl_Languages"), progress_callback=log_progress)
+
+def _run_indigenous_scrape_inner():
+    scrape_indigenous_gr12(_subject_dir("Indigenous_Education"), progress_callback=log_progress)
+
+def _run_lwict_scrape_inner():
+    scrape_lwict(_subject_dir("LwICT"), progress_callback=log_progress)
 
 
 @app.get("/api/status")

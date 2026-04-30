@@ -15,6 +15,8 @@ from pathlib import Path
 import fitz
 import httpx
 
+from app.grade_splitter import split_to_per_grade
+
 logger = logging.getLogger(__name__)
 
 PDF_URLS = {
@@ -205,5 +207,8 @@ def scrape_all_arts912(
                 f"Saved {filename}: {len(clusters)} areas, {total_rl} recursive learnings, "
                 f"{total_enacted} enacted learnings, {total_iq} inquiry questions"
             )
+
+        # Split into per-grade files
+        split_to_per_grade(output_data, output_dir, f"Arts_{safe_name}", progress_callback=progress_callback)
 
     return results

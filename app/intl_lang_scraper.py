@@ -22,6 +22,8 @@ from pathlib import Path
 import fitz
 import httpx
 
+from app.grade_splitter import split_to_per_grade
+
 logger = logging.getLogger(__name__)
 
 LANG_CONFIGS = {
@@ -596,6 +598,14 @@ def scrape_all_intl_languages(
         total = sum(len(c["specific_learning_outcomes"]) for c in clusters)
         if progress_callback:
             progress_callback(f"Saved {filename}: {len(clusters)} clusters, {total} outcomes")
+
+        # Split into per-grade files
+        grade_map = {
+            "ASL": ["10F", "20F", "30S", "40S"],
+            "Spanish_S1S4": ["Senior 1", "Senior 2", "Senior 3", "Senior 4"],
+        }
+        grades = grade_map.get(lang_key, config.get("grades"))
+        split_to_per_grade(output_data, output_dir, lang_key, grades=grades, progress_callback=progress_callback)
 
         results[lang_key] = clusters
 
