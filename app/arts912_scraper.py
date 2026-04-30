@@ -2,13 +2,14 @@
 
 4 disciplines: Dance, Dramatic Arts, Music, Visual Arts.
 Each has 4 Essential Learning Areas (Making, Creating, Connecting, Responding)
-with 13 Recursive Learnings.
+with 13 Recursive Learnings, each containing Enacted Learnings and Inquiry Questions.
 
 Source PDFs: edu.gov.mb.ca/k12/cur/arts/docs/{disc}_9-12.pdf
 """
 
 import json
 import logging
+import re
 from pathlib import Path
 
 import fitz
@@ -23,78 +24,6 @@ PDF_URLS = {
     "Visual Arts": "https://www.edu.gov.mb.ca/k12/cur/arts/docs/visual_9-12.pdf",
 }
 
-DISC_PREFIXES = {
-    "Dance": "DA",
-    "Dramatic Arts": "DR",
-    "Music": "M",
-    "Visual Arts": "VA",
-}
-
-# Hardcoded recursive learning descriptions (13 per discipline)
-# Extracted from the PDFs but cleaned up since the decorative layout breaks text extraction
-RECURSIVE_LEARNINGS = {
-    "Dance": {
-        "DA–M1": "The learner develops competencies for using elements of dance in a variety of contexts.",
-        "DA–M2": "The learner develops competencies for using dance techniques in a variety of contexts.",
-        "DA–M3": "The learner develops expressive skills and musicality to communicate artistic intent.",
-        "DA–CR1": "The learner generates ideas from a variety of sources for creating dance.",
-        "DA–CR2": "The learner experiments with, develops, and uses ideas for creating dance.",
-        "DA–CR3": "The learner revises, refines, and shares dance ideas and creative work.",
-        "DA–C1": "The learner develops understandings about people and practices in dance.",
-        "DA–C2": "The learner develops understandings about the influence and impact of dance.",
-        "DA–C3": "The learner develops understandings about the roles, purposes, and meanings of dance.",
-        "DA–R1": "The learner generates initial reactions to dance experiences.",
-        "DA–R2": "The learner critically observes and describes dance experiences.",
-        "DA–R3": "The learner analyzes and interprets dance experiences.",
-        "DA–R4": "The learner applies new understandings about dance to construct identity and to act in the world.",
-    },
-    "Dramatic Arts": {
-        "DR–M1": "The learner develops competencies for using the tools and techniques of body, mind, and voice for drama/theatre.",
-        "DR–M2": "The learner develops competencies for using elements of drama/theatre in a variety of contexts.",
-        "DR–M3": "The learner develops competencies for using a range of dramatic forms and styles.",
-        "DR–CR1": "The learner generates ideas from a variety of sources for creating drama/theatre.",
-        "DR–CR2": "The learner experiments with, develops, and uses ideas for creating drama/theatre.",
-        "DR–CR3": "The learner revises, refines, and shares drama/theatre ideas and creative work.",
-        "DR–C1": "The learner develops understandings about people and practices in the dramatic arts.",
-        "DR–C2": "The learner develops understandings about the influence and impact of the dramatic arts.",
-        "DR–C3": "The learner develops understandings about the roles, purposes, and meanings of the dramatic arts.",
-        "DR–R1": "The learner generates initial reactions to drama/theatre experiences.",
-        "DR–R2": "The learner critically observes and describes drama/theatre experiences.",
-        "DR–R3": "The learner analyzes and interprets drama/theatre experiences.",
-        "DR–R4": "The learner applies new understandings about drama/theatre to construct identity and to act in the world.",
-    },
-    "Music": {
-        "M–M1": "The learner develops competencies for using tools and techniques to produce and respond to sound.",
-        "M–M2": "The learner develops listening competencies for making music.",
-        "M–M3": "The learner develops competencies for using elements of music in a variety of contexts.",
-        "M–CR1": "The learner generates ideas from a variety of sources for creating music.",
-        "M–CR2": "The learner experiments with, develops, and uses ideas for creating music.",
-        "M–CR3": "The learner revises, refines, and shares music ideas and creative work.",
-        "M–C1": "The learner develops understandings about people and practices in music.",
-        "M–C2": "The learner develops understandings about the influence and impact of music.",
-        "M–C3": "The learner develops understandings about the roles, purposes, and meanings of music.",
-        "M–R1": "The learner generates initial reactions to music experiences.",
-        "M–R2": "The learner critically listens to, observes, and describes music experiences.",
-        "M–R3": "The learner analyzes and interprets music experiences.",
-        "M–R4": "The learner applies new understandings about music to construct identity and to act in the world.",
-    },
-    "Visual Arts": {
-        "VA–M1": "The learner develops competencies for using elements and principles of artistic design.",
-        "VA–M2": "The learner develops competencies for using visual art media, tools, techniques, and processes.",
-        "VA–M3": "The learner develops skills in observation and depiction.",
-        "VA–CR1": "The learner generates and uses ideas from a variety of sources for creating visual art.",
-        "VA–CR2": "The learner develops original artworks, integrating ideas and art elements, principles, and techniques.",
-        "VA–CR3": "The learner revises, refines, and shares ideas and original artworks.",
-        "VA–C1": "The learner develops understandings about people and practices in the visual arts.",
-        "VA–C2": "The learner develops understandings about the influence and impact of the visual arts.",
-        "VA–C3": "The learner develops understandings about the roles, purposes, and meanings of the visual arts.",
-        "VA–R1": "The learner generates initial reactions to visual arts experiences.",
-        "VA–R2": "The learner critically observes and describes visual arts experiences.",
-        "VA–R3": "The learner analyzes and interprets visual arts experiences.",
-        "VA–R4": "The learner applies new understandings about visual arts to construct identity and to act in the world.",
-    },
-}
-
 AREAS = [
     ("M", "Making"),
     ("CR", "Creating"),
@@ -103,38 +32,139 @@ AREAS = [
 ]
 
 
+def _download_pdf(url: str) -> bytes:
+    resp = httpx.get(url, follow_redirects=True, timeout=120)
+    resp.raise_for_status()
+    return resp.content
+
+
+def _classify_area(code_suffix: str) -> str:
+    """Return the area code (M, CR, C, R) for a recursive learning suffix."""
+    if code_suffix.startswith("CR"):
+        return "CR"
+    if code_suffix.startswith("M"):
+        return "M"
+    if code_suffix.startswith("C"):
+        return "C"
+    if code_suffix.startswith("R"):
+        return "R"
+    return ""
+
+
+def _extract_enacted_and_inquiries(doc, page_num: int) -> tuple[list[str], list[str]]:
+    """Extract enacted learnings and inquiry questions from a recursive learning's pages."""
+    enacted = []
+    inquiries = []
+
+    # Enacted learnings are on the RL page itself
+    text = doc[page_num - 1].get_text()
+    lines = text.split("\n")
+    for line in lines:
+        line = line.strip()
+        if not line or len(line) < 5:
+            continue
+        if re.match(r"^[A-Z] [a-z] [a-z]", line):
+            continue
+        if line in ("Q", "?"):
+            continue
+        if re.match(r"^\d+$", line):
+            continue
+        if line in ("Making", "Creating", "Connecting", "Responding"):
+            continue
+        if "Inquiry Questions" in line:
+            continue
+        # Skip the recursive learning description text (runs along the right edge)
+        if re.match(r"^(The\s+lea|of\s+d|rner|deve|lops|comp|eten)", line):
+            continue
+        if len(line) < 10 and not line.startswith(("using", "creating", "developing")):
+            continue
+        enacted.append(line)
+
+    # Inquiry questions are on the next page
+    if page_num < len(doc):
+        iq_text = doc[page_num].get_text()
+        iq_lines = iq_text.split("\n")
+        current_q = ""
+        for line in iq_lines:
+            line = line.strip()
+            if not line or len(line) < 5:
+                continue
+            if re.match(r"^[A-Z] [a-z] [a-z]", line):
+                continue
+            if line in ("Q", "?"):
+                continue
+            if re.match(r"^\d+$", line):
+                continue
+            if "Inquiry Questions" == line:
+                continue
+            # Inquiry questions typically start with How, What, Why, In what, etc.
+            if re.match(r"^(How|What|Why|In what|When|Where|Can|Do|Is|Are|Which)", line):
+                if current_q:
+                    inquiries.append(current_q)
+                current_q = line
+            elif current_q:
+                current_q += " " + line
+        if current_q:
+            inquiries.append(current_q)
+
+    return enacted, inquiries
+
+
 def scrape_all_arts912(
     output_dir: Path,
     progress_callback=None,
 ) -> dict[str, list]:
     """Scrape Arts Education Grades 9-12 (Dance, Drama, Music, Visual Arts)."""
     results: dict[str, list] = {}
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    for disc_name, prefix in DISC_PREFIXES.items():
-        learnings = RECURSIVE_LEARNINGS[disc_name]
+    for disc_name, url in PDF_URLS.items():
+        if progress_callback:
+            progress_callback(f"Downloading {disc_name} 9-12 PDF...")
 
-        clusters: list[dict] = []
+        try:
+            pdf_bytes = _download_pdf(url)
+        except Exception as e:
+            if progress_callback:
+                progress_callback(f"ERROR downloading {disc_name}: {e}")
+            continue
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        if progress_callback:
+            progress_callback(f"Parsing {disc_name} 9-12 ({len(doc)} pages)...")
+
+        toc = doc.get_toc()
+        rl_entries = [(t[2], t[1]) for t in toc if t[0] == 3 and re.match(r"^[A-Z]+-", t[1])]
+
+        # Group by Essential Learning Area
+        area_outcomes: dict[str, list] = {}
+        for page_num, code in rl_entries:
+            suffix = code.split("-", 1)[1] if "-" in code else code
+            area_code = _classify_area(suffix)
+            area_name = dict(AREAS).get(area_code, area_code)
+
+            enacted, inquiries = _extract_enacted_and_inquiries(doc, page_num)
+
+            # Combine enacted learnings into a single description
+            enacted_text = " ".join(enacted).replace("  ", " ").strip()
+
+            outcome = {
+                "code": code,
+                "description": enacted_text,
+                "glo": [f"Essential Learning Area: {area_name}"],
+                "glo_description": [f"Essential Learning Area: {area_name}"],
+                "enacted_learnings": enacted,
+                "inquiry_questions": inquiries,
+            }
+
+            if area_name not in area_outcomes:
+                area_outcomes[area_name] = []
+            area_outcomes[area_name].append(outcome)
+
+        clusters = []
         for area_code, area_name in AREAS:
-            outcomes = []
-            for code, desc in sorted(learnings.items()):
-                suffix = code.split("–")[1]
-                if area_code == "M" and suffix.startswith("M") and not suffix.startswith("M–"):
-                    outcomes.append({"code": code, "description": desc,
-                                     "glo": [f"Essential Learning Area: {area_name}"],
-                                     "glo_description": [f"Essential Learning Area: {area_name}"]})
-                elif area_code == "CR" and suffix.startswith("CR"):
-                    outcomes.append({"code": code, "description": desc,
-                                     "glo": [f"Essential Learning Area: {area_name}"],
-                                     "glo_description": [f"Essential Learning Area: {area_name}"]})
-                elif area_code == "C" and suffix.startswith("C") and not suffix.startswith("CR"):
-                    outcomes.append({"code": code, "description": desc,
-                                     "glo": [f"Essential Learning Area: {area_name}"],
-                                     "glo_description": [f"Essential Learning Area: {area_name}"]})
-                elif area_code == "R" and suffix.startswith("R"):
-                    outcomes.append({"code": code, "description": desc,
-                                     "glo": [f"Essential Learning Area: {area_name}"],
-                                     "glo_description": [f"Essential Learning Area: {area_name}"]})
-
+            outcomes = area_outcomes.get(area_name, [])
             if outcomes:
                 clusters.append({
                     "id": f"Essential Learning Area: {area_name}",
@@ -159,8 +189,21 @@ def scrape_all_arts912(
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=4, ensure_ascii=False)
 
-        total = sum(len(c["specific_learning_outcomes"]) for c in clusters)
+        total_rl = sum(len(c["specific_learning_outcomes"]) for c in clusters)
+        total_enacted = sum(
+            len(o["enacted_learnings"])
+            for c in clusters
+            for o in c["specific_learning_outcomes"]
+        )
+        total_iq = sum(
+            len(o["inquiry_questions"])
+            for c in clusters
+            for o in c["specific_learning_outcomes"]
+        )
         if progress_callback:
-            progress_callback(f"Saved {filename}: {len(clusters)} areas, {total} recursive learnings")
+            progress_callback(
+                f"Saved {filename}: {len(clusters)} areas, {total_rl} recursive learnings, "
+                f"{total_enacted} enacted learnings, {total_iq} inquiry questions"
+            )
 
     return results
